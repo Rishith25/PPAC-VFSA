@@ -1,86 +1,225 @@
-import {Web3Storage, getFilesFromPath } from 'web3.storage';
-const {ethers} = require('ethers');
+import { W3upClient } from "@web3-storage/w3up-client";
+import { ethers } from "ethers";
+import formidable from "formidable";
+import path from "path";
+import axios from "axios";
+import fs from "fs";
+import { exec } from "child_process";
+import FormData from "form-data";
 import * as Constants from "../constant";
-import formidable from 'formidable';
-import path from 'path';
 
-export const config = {
-    api: {
-        bodyParser: false    // disable built-in body parser
-    }
+export const config = { api: { bodyParser: false } };
+
+const UPLOAD_DIR = path.join(process.cwd(), "/pages/uploads");
+const ENCRYPT_DIR = path.join(process.cwd(), "/pages/encrypted");
+const ENCRYPT_SCRIPT = path.join(process.cwd(), "/scripts/encrypt.py");
+
+/**
+ * Ensures the upload directory exists
+ */
+function ensureUploadDir() {
+  if (!fs.existsSync(UPLOAD_DIR)) {
+    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  }
 }
 
-function moveFiletoServer(req) {
-    return new Promise((resolve, reject) => {
-        const options = {};
-        options.uploadDir = path.join(process.cwd(), "/pages/uploads");
-        options.filename = (name, ext, path, form) => {
-            return path.originalFilename;
+/**
+ * Handles file upload and moves it to the server
+ */
+async function moveFileToServer(req) {
+  return new Promise((resolve, reject) => {
+    ensureUploadDir();
+
+    const form = formidable({
+      uploadDir: UPLOAD_DIR,
+      keepExtensions: true,
+      filename: (name, ext, part) => part.originalFilename,
+    });
+
+    form.parse(req, (err, fields, files) => {
+      if (err) return reject("Error processing file upload");
+
+      const file = Object.values(files)[0];
+      if (!file) return reject("No file provided");
+      // console.log(file);
+      resolve({
+        uniqueFileName: file.newFilename,
+        actualFileName: file.originalFilename,
+        userAddress: fields.userAddress,
+      });
+    });
+  });
+}
+
+/**
+ * Encrypts the file and extracts keywords using a Python script
+ */
+async function encryptAndExtractKeywords(filePath) {
+  return new Promise((resolve, reject) => {
+    // const fullFilePath = path.join(UPLOAD_DIR, filePath);
+
+    // if (!fs.existsSync(fullFilePath)) return reject("File not found");
+
+    // exec(`python "${ENCRYPT_SCRIPT}" "${fullFilePath}"`, (error, stdout) => {
+    exec(
+      `python "${ENCRYPT_SCRIPT}" "${filePath}"`,
+      (error, stdout, stderr) => {
+        if (error) {
+          console.log("Python error", stderr);
+          return reject("Encryption script failed");
         }
-        const form = formidable(options);
-
-        form.parse(req, (err, fields, files) => {
-            if (err) {
-                console.error(err);
-                reject("Something went wrong");
-                return;
-            }
-            const uniqueFileName = fields.filename;
-            const actualFileName = files.file.originalFilename;
-
-            resolve({uniqueFileName, actualFileName});
-        })
-    })
+        try {
+          resolve(JSON.parse(stdout));
+        } catch (parseError) {
+          reject("Failed to parse script output");
+        }
+      }
+    );
+  });
 }
 
+/**
+ * Uploads the encrypted file to Pinata IPFS
+ */
+async function uploadToPinata(filePath, actualFileName) {
+  if (!fs.existsSync(filePath)) throw new Error("Encrypted file missing");
 
-async function storeDataInBlockchain(actualFileName, uniqueFileName) {
-    const provider = new ethers.providers.JsonRpcProvider(Constants.API_URL);
-    const signer = new ethers.Wallet(Constants.PRIVATE_KEY, provider);
-    const StorageContract = new ethers.Contract(Constants.contractAddress, Constants.contractAbi, signer);
+  const formData = new FormData();
+  formData.append("file", fs.createReadStream(filePath));
+  formData.append(
+    "pinataMetadata",
+    JSON.stringify({ name: path.basename(actualFileName), actualFileName })
+  );
 
-    const isStored = await StorageContract.isFileStored(uniqueFileName);
-
-    console.log(isStored);
-
-    if (isStored == false) {
-        const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkaWQ6ZXRocjoweDU5Y2VmRmY4RDg2MkEzQUY3OTIzMzhkNjNmOEEwZjQ0MzAwMTQwN2YiLCJpc3MiOiJ3ZWIzLXN0b3JhZ2UiLCJpYXQiOjE2ODA4OTE1NDY3NTQsIm5hbWUiOiJpcGZzLWJsb2NrY2hhaW4ifQ.bSwyKqF5Htm2uIgp3tvdRlpamXx8R42aP6SWy96-DZc";
-        const storage = new Web3Storage({token: token});
-        const uploadPath = path.join(process.cwd(), "/pages/uploads");
-        const files = await getFilesFromPath(uploadPath, `/${actualFileName}`);
-        const cid = await storage.put(files);
-        let hash = cid.toString();
-        console.log("Storing the data in IPFS");
-        const tx = await StorageContract.upload(uniqueFileName, hash);
-        await tx.wait();
-        const storedhash = await StorageContract.getIPFSHash(uniqueFileName);
-        return {message: `IPFS hash is stored in the smart contract: ${storedhash}`}
+  const response = await axios.post(
+    "https://api.pinata.cloud/pinning/pinFileToIPFS",
+    formData,
+    {
+      headers: {
+        pinata_api_key: Constants.PINATA_API_KEY,
+        pinata_secret_api_key: Constants.PINATA_SECRET_API_KEY,
+        ...formData.getHeaders(),
+      },
     }
+  );
 
-    else {
-        console.log("Data is already stored for this file name");
-        const IPFShash = await StorageContract.getIPFSHash(uniqueFileName);
-        return {message: `IPFS hash is already stored in the smart contract: ${IPFShash}`}
-    }
+  return response.data.IpfsHash;
 }
-// we are moving files from local pc to this server directoy
-// we are going to store file in IPFS
-// we are going to store IPFS hash in blockchain
+
+/**
+ * Stores the file metadata on the blockchain
+ */
+// async function storeDataInBlockchain(uniqueFileName, ipfsHash, keywords) {
+//   const provider = new ethers.JsonRpcProvider(Constants.API_URL);
+//   const signer = new ethers.Wallet(Constants.PRIVATE_KEY, provider);
+//   const StorageContract = new ethers.Contract(
+//     Constants.FilecontractAddress,
+//     Constants.contractAbi,
+//     signer
+//   );
+
+//   if (await StorageContract.isFileStored(uniqueFileName)) {
+//     return {
+//       message: `IPFS hash already stored: ${await StorageContract.getIPFSHash(
+//         uniqueFileName
+//       )}`,
+//     };
+//   }
+
+//   const tx = await StorageContract.upload(uniqueFileName, ipfsHash, keywords);
+//   await tx.wait();
+
+//   return {
+//     message: `IPFS hash stored: ${await StorageContract.getIPFSHash(
+//       uniqueFileName
+//     )}`,
+//   };
+// }
+
+async function storeDataInBlockchain(
+  uniqueFileName,
+  ipfsHash,
+  keywords,
+  userAddress
+) {
+  if (!window.ethereum) {
+    throw new Error(
+      "MetaMask is not installed. Please install MetaMask to continue."
+    );
+  }
+  // Connect to the user's MetaMask wallet
+  const provider = new ethers.BrowserProvider(window.ethereum);
+  await window.ethereum.request({ method: "eth_requestAccounts" });
+
+  // Get the signer (active MetaMask user)
+  const signer = await provider.getSigner();
+
+  // Initialize contract with user's signer
+  const StorageContract = new ethers.Contract(
+    Constants.FilecontractAddress,
+    Constants.contractAbi,
+    signer
+  );
+
+  // Check if the file is already stored
+  if (await StorageContract.isFileStored(uniqueFileName)) {
+    return {
+      message: `File already stored. IPFS hash: ${await StorageContract.getIPFSHash(
+        uniqueFileName
+      )}`,
+    };
+  }
+
+  console.log(
+    `Uploading file to blockchain as ${await signer.getAddress()}...`
+  );
+
+  // Send transaction from user's wallet
+  const tx = await StorageContract.upload(
+    uniqueFileName,
+    ipfsHash,
+    keywords,
+    userAddress
+  );
+  await tx.wait();
+
+  return {
+    message: `File stored successfully! IPFS Hash: ${await StorageContract.getIPFSHash(
+      uniqueFileName
+    )}`,
+  };
+}
+
+/**
+ * API Handler
+ */
 async function handler(req, res) {
-    try {
-        const {uniqueFileName, actualFileName} = await moveFiletoServer(req)
-        console.log("Files are stored in local server");
+  try {
+    const { uniqueFileName, actualFileName, userAddress } =
+      await moveFileToServer(req);
+    console.log("File uploaded successfully");
 
-        await new Promise(resolve => setTimeout(resolve, 2000));  //waiting for 2 seconds
+    const { encrypted_file_name, extracted_keywords } =
+      await encryptAndExtractKeywords(uniqueFileName);
+    console.log("Encryption and keyword extraction successful");
 
-        const resposne = await storeDataInBlockchain(actualFileName, uniqueFileName)
-        console.log("Hash stored in smart contract");
+    const encryptedFilePath = path.join(ENCRYPT_DIR, encrypted_file_name);
+    console.log(encryptedFilePath);
+    const ipfsHash = await uploadToPinata(encryptedFilePath, actualFileName);
+    console.log("File uploaded to IPFS:", ipfsHash);
 
-        return res.status(200).json(resposne);
-    }
-    catch (err) {
-        console.error(err);
-    }
+    // Return metadata to the frontend for blockchain transaction
+    return res.status(200).json({
+      message: "File uploaded to IPFS",
+      ipfsHash,
+      keywords: extracted_keywords,
+      uniqueFileName: actualFileName,
+      encryptedFileName: encrypted_file_name,
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: error.toString() });
+  }
 }
 
 export default handler;
