@@ -345,9 +345,9 @@ function App() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       File Name
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       IPFS Hash
-                    </th>
+                    </th> */}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Owner
                     </th>
@@ -368,9 +368,9 @@ function App() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {file.fileName}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 break-all">
+                      {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 break-all">
                         {file.ipfsHash}
-                      </td>
+                      </td> */}
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {file.owner}
                       </td>
