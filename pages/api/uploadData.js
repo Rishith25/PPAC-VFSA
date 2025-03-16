@@ -56,11 +56,6 @@ async function moveFileToServer(req) {
  */
 async function encryptAndExtractKeywords(filePath) {
   return new Promise((resolve, reject) => {
-    // const fullFilePath = path.join(UPLOAD_DIR, filePath);
-
-    // if (!fs.existsSync(fullFilePath)) return reject("File not found");
-
-    // exec(`python "${ENCRYPT_SCRIPT}" "${fullFilePath}"`, (error, stdout) => {
     exec(
       `python "${ENCRYPT_SCRIPT}" "${filePath}"`,
       (error, stdout, stderr) => {

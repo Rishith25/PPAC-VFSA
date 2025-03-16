@@ -1,79 +1,137 @@
-# cpabe_encrypt.py
-from charm.toolbox.pairinggroup import PairingGroup, GT  # type: ignore
-from charm.schemes.abenc.abenc_bsw07 import CPabe_BSW07  # type: ignore
+import os
+import json
+import argparse
+import mimetypes
+import nltk
+import secrets
+from collections import Counter
+from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer
+
+# Ensure necessary NLTK data is available
+nltk.download("stopwords", quiet=True)
+nltk.download("punkt", quiet=True)
+
+UPLOAD_DIR = os.path.join("pages", "uploads")
+ENCRYPT_DIR = os.path.join("pages", "encrypted")
+CUSTOM_STOPWORDS = set(stopwords.words("english")).union(
+    {"and", "the", "to", "is", "for", "with", "ll", "http", "123"}
+)
+
+stemmer = PorterStemmer()
 
 
-def cpabe_setup():
-    # Initialize pairing group (symmetric) and CP-ABE scheme
-    group = PairingGroup("SS512")
-    cpabe = CPabe_BSW07(group)
+# Manual CP-ABE Implementation
+class BilinearPairing:
+    def __init__(self, g, p):
+        self.g = g  # Generator
+        self.p = p  # Prime order
 
-    # Generate public key and master key
-    public_key, master_key = cpabe.setup()
-    return cpabe, group, public_key, master_key
-
-
-def cpabe_encrypt(cpabe, group, public_key, aes_key_bytes, policy_str):
-    # Convert the AES key to a group element.
-    # In practice, you might want to encrypt a key that is represented as a string (or bytes) by using a hybrid encryption approach.
-    # For demonstration, we treat the AES key as a string.
-    # NOTE: Make sure the data is in the correct format (e.g., string).
-    aes_key_str = aes_key_bytes.hex()  # converting bytes to hex string representation
-    ciphertext = cpabe.encrypt(public_key, aes_key_str, policy_str)
-    # Optionally, serialize the ciphertext (e.g., using json)
-    serialized_ct = group.serialize(ciphertext)
-    return serialized_ct
+    def pairing(self, a, b):
+        return (a * b) % self.p
 
 
-def cpabe_decrypt(cpabe, group, public_key, master_key, user_key, serialized_ct):
-    # Deserialize the ciphertext
-    ciphertext = group.deserialize(serialized_ct)
-    # Decrypt using the user key
-    decrypted_aes_key_str = cpabe.decrypt(public_key, user_key, ciphertext)
-    # Convert hex string back to bytes
-    return bytes.fromhex(decrypted_aes_key_str)
+class CPABE:
+    def __init__(self, pairing):
+        self.pairing = pairing
+
+    def setup(self):
+        g = secrets.randbelow(self.pairing.p)
+        pk = g  # Public key
+        msk = secrets.randbelow(self.pairing.p)  # Master secret key
+        return pk, msk
+
+    def keygen(self, pk, msk, attributes):
+        sk = {
+            attr: (msk * secrets.randbelow(self.pairing.p)) % self.pairing.p
+            for attr in attributes
+        }
+        return sk
+
+    def encrypt(self, pk, message, policy):
+        secret = secrets.randbelow(self.pairing.p)
+        ciphertext = [
+            (ord(char) * pk * secret) % self.pairing.p
+            for char in message.decode("utf-8", "ignore")
+        ]
+        return {"ciphertext": ciphertext, "policy": policy, "secret": secret}
+
+    def decrypt(self, sk, ciphertext):
+        if not all(
+            attr in sk for attr in ciphertext["policy"].split() if attr.isalnum()
+        ):
+            raise ValueError("Access Denied: Attributes do not satisfy policy")
+
+        secret = ciphertext["secret"]
+        message = "".join(
+            chr((char // (sk[list(sk.keys())[0]] * secret)) % self.pairing.p)
+            for char in ciphertext["ciphertext"]
+        )
+        return message
 
 
-def cpabe_keygen(cpabe, group, public_key, master_key, user_attributes):
-    # user_attributes should be a list of strings, e.g., ["role:Admin", "department:Finance"]
-    user_key = cpabe.keygen(public_key, master_key, user_attributes)
-    return user_key
+pairing = BilinearPairing(g=2, p=7919)
+abesystem = CPABE(pairing)
+
+pk, msk = abesystem.setup()
 
 
-# Example usage:
+def extract_keywords(text):
+    tokens = nltk.word_tokenize(text.lower())
+    filtered_tokens = [
+        stemmer.stem(token)
+        for token in tokens
+        if token not in CUSTOM_STOPWORDS and len(token) > 2
+    ]
+    counts = Counter(filtered_tokens)
+    keywords = [word for word, count in counts.items() if count > 1]
+    return list(set(keywords))
+
+
+def process_file(file_name, user_role, user_department):
+    file_path = os.path.join(UPLOAD_DIR, file_name)
+    mime_type, _ = mimetypes.guess_type(file_path)
+
+    with open(file_path, "rb") as f:
+        file_data = f.read()
+
+    keywords = []
+    if mime_type and mime_type.startswith("text"):
+        try:
+            text = file_data.decode("utf-8")
+            keywords = extract_keywords(text)
+        except UnicodeDecodeError:
+            pass
+
+    policy = f"{user_role} {user_department}"
+    user_key = abesystem.keygen(pk, msk, {user_role, user_department})
+    encrypted_data = abesystem.encrypt(pk, file_data, policy)
+
+    encrypted_file_name = f"{file_name}_encrypted.json"
+    encrypted_file_path = os.path.join(ENCRYPT_DIR, encrypted_file_name)
+    os.makedirs(ENCRYPT_DIR, exist_ok=True)
+
+    with open(encrypted_file_path, "w") as f:
+        json.dump(encrypted_data, f)
+
+    output = {
+        "encrypted_file_name": encrypted_file_name,
+        "extracted_keywords": keywords,
+        "policy": policy,
+    }
+    print(json.dumps(output))
+    return output
+
+
 if __name__ == "__main__":
-    # 1. CP-ABE Setup
-    cpabe, group, public_key, master_key = cpabe_setup()
-
-    # 2. Define a CP-ABE policy based on user attributes.
-    # Here our policy is: (role:Admin OR role:Manager) AND department:Finance
-    policy = "((role:Admin OR role:Manager) AND department:Finance)"
-
-    # Suppose we already generated an AES key in the AES encryption section:
-    import os
-
-    aes_key = os.urandom(32)  # same key used for AES encryption
-
-    # 3. Encrypt the AES key using CP-ABE with the given policy.
-    serialized_ciphertext = cpabe_encrypt(cpabe, group, public_key, aes_key, policy)
-    # Save serialized_ciphertext (this is what you would store on-chain or in a database)
-    with open("encrypted_aes_key.json", "wb") as f:
-        f.write(serialized_ciphertext)
-    print("AES key has been encrypted with CP-ABE.")
-
-    # 4. Simulate a user with attributes trying to decrypt:
-    # For example, a user registering via your React front-end might supply these:
-    user_attributes = [
-        "role:Admin",
-        "department:Finance",
-        "name:Alice",
-    ]  # user attributes from your state
-    user_key = cpabe_keygen(cpabe, group, public_key, master_key, user_attributes)
-
-    # 5. Decrypt the AES key:
-    with open("encrypted_aes_key.json", "rb") as f:
-        serialized_ct = f.read()
-    decrypted_aes_key = cpabe_decrypt(
-        cpabe, group, public_key, master_key, user_key, serialized_ct
+    parser = argparse.ArgumentParser(
+        description="Encrypt a file using manual CP-ABE and extract keywords."
     )
-    print("Decrypted AES key (matches original):", decrypted_aes_key == aes_key)
+    parser.add_argument("file_name", type=str, help="File name (in pages/uploads)")
+    parser.add_argument("user_role", type=str, help="User role (for CP-ABE policy)")
+    parser.add_argument(
+        "user_department", type=str, help="User department (for CP-ABE policy)"
+    )
+    args = parser.parse_args()
+
+    process_file(args.file_name, args.user_role, args.user_department)
