@@ -38,7 +38,7 @@ export default async function handler(req, res) {
     );
 
     const fileNames = await contract.getAllFiles();
-    console.log("File names from blockchain:", fileNames);
+
     // Fetch additional blockchain data for each file
     const filesWithBlockchainData = await Promise.all(
       fileNames.map(async (file) => {
