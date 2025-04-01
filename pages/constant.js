@@ -3,10 +3,10 @@ export const API_URL = "http://127.0.0.1:7545";
 // GATEWAY: https://gateway.pinata.cloud/ipfs/hashvalue
 
 export const ADMIN_PRIVATE_KEY =
-  "0xec4f1c236c7373817b55195f9dbdd8d98b2e821869e1f1a33c50f24d1e2957e4";
+  "0xeb71510868a31373ff47a4fee2803a1dbaddcb22cd5c7bad3a0f9c5f524d1600";
 
-export const FilecontractAddress = "0x693c827CFf10F09D25747c3D9A2b3Bbf5A708EF3";
-export const UsercontractAddress = "0x2EFfA1A226eDa3d4Dc430Cd1AEd69CB5d5098603";
+export const FilecontractAddress = "0x888F6450B115590Eb840E5B7633f793809353b4A";
+export const UsercontractAddress = "0x74c40987Ecc4b3E9A7f9B361726F039e2a538A91";
 export const contractAbi = [
   {
     inputs: [

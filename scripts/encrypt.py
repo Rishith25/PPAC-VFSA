@@ -36,21 +36,26 @@ def save_key(key):
         f.write(key.hex())
 
 
-def get_or_create_key():
-    if os.path.exists(KEY_FILE):
-        with open(KEY_FILE, "r") as f:
-            hex_key = f.read().strip()
-        try:
-            return bytes.fromhex(hex_key)
-        except ValueError:
-            print("Invalid key in secret.key, generating a new one.")
-            key = generate_key()
-            save_key(key)
-            return key
-    else:
-        key = generate_key()
-        save_key(key)
-        return key
+# def get_or_create_key():
+#     if os.path.exists(KEY_FILE):
+#         with open(KEY_FILE, "r") as f:
+#             hex_key = f.read().strip()
+#         try:
+#             return bytes.fromhex(hex_key)
+#         except ValueError:
+#             print("Invalid key in secret.key, generating a new one.")
+#             key = generate_key()
+#             save_key(key)
+#             return key
+#     else:
+#         key = generate_key()
+#         save_key(key)
+#         return key
+
+def create_and_save_key():
+    key = generate_key()
+    save_key(key)
+    return key
 
 
 def generate_nonce():
@@ -111,7 +116,7 @@ def process_file(file_name):
     else:
         keywords = []
 
-    key = get_or_create_key()  # load or create a key
+    key = create_and_save_key()  # load or create a key
     nonce = generate_nonce()  # generate a new nonce for each encryption
 
     encrypted_file_name = encrypt_file(file_name, key, nonce)

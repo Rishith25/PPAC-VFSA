@@ -21,17 +21,19 @@ async function loginUsertoBlockchain(userName, password) {
 
     console.log("Calling contract to log in user...");
 
-    const hashedPassword = ethers.solidityPackedKeccak256(
-      ["string"],
-      [password]
-    );
+    const hashedPassword = ethers.keccak256(ethers.toUtf8Bytes(password));
 
     // Send transaction
-    const tx = await contract.loginUser(userName, hashedPassword);
+    const tx = await contract.loginUser(userName, password);
     await tx.wait();
 
+    const addr = await signer.getAddress();
+
+    console.log("address: /////////////////////////////////")
+    console.log(addr);
+
     // Fetch user key separately
-    const userKey = await contract.getUserKey(await signer.getAddress());
+    const userKey = await contract.getUserKey(addr);
 
     console.log("User logged in successfully:", userKey);
     return { success: true, message: "User logged in successfully!", userKey };

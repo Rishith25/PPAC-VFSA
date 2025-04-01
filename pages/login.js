@@ -44,16 +44,28 @@ export default function LoginPage() {
       );
 
       const hashedPassword = keccak256(ethers.toUtf8Bytes(data.password));
-      const userKey = await contract.loginUser(data.userName, data.password);
+      const userKeys = await contract.loginUser(data.userName, data.password);
 
-      if (!userKey) {
+      if (!userKeys) {
         throw new Error("Invalid username or password.");
       }
+
+      // const addr = await signer.getAddress();
+
+      console.log("address: /////////////////////////////////")
+      console.log(userAddress);
+
+      // Fetch user key separately
+      const userKey = await contract.getUserKey(userAddress);
+
+      console.log("user key : //////////////////////")
+
+      console.log(userKey)
 
       // Store user details in localStorage
       localStorage.setItem(
         "user",
-        JSON.stringify({ userName: data.userName, userKey })
+        JSON.stringify({ userKey : userKey })
       );
 
       router.push("/dashboard");

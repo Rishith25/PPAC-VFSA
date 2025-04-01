@@ -44,12 +44,9 @@ export default async function handler(req, res) {
       }),
     });
 
-    const encryptData = await keyGenRes.json();
-    if (!encryptData.sk_user) {
-      throw new Error("Encryption failed");
-    }
+    const UserSecretKeyRes = await keyGenRes.json();
 
-    const UserSecretKey = encryptData.sk_user; // Encrypted AES Key
+    const UserSecretKey = JSON.stringify(UserSecretKeyRes)
 
     console.log("UserSecretKey:", UserSecretKey);
 
@@ -67,7 +64,7 @@ export default async function handler(req, res) {
     const tx = await contract.registerUser(
       userAddress,
       userName,
-      hashedPassword,
+      password,
       name,
       role,
       department,

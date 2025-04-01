@@ -60,16 +60,17 @@ async function moveFileToServer(req) {
         actualFileName: file.originalFilename,
         userAddress: fields.userAddress,
         filePath: file.filepath,
+        policy: fields.policy
       });
     });
   });
 }
 
-async function encryptAndExtractKeywords(filePath) {
+async function encryptAndExtractKeywords(filePath, policy) {
   try {
     // Step 1: Extract keywords and Bloom Filter
     const { stdout } = await execPromise(
-      `python "${KEYWORD_SCRIPT}" "${filePath}"`
+      `/home/shyamprakash/ppac/PPAC-VFSA/myenv/bin/python "${KEYWORD_SCRIPT}" "${filePath}"`
     ); // ✅ Fix: Use correct path
     let extractedData;
     try {
@@ -103,12 +104,16 @@ async function encryptAndExtractKeywords(filePath) {
 
     // Step 2: Encrypt the file using Flask API
     const response = await axios.post("http://172.31.80.1:5000/encrypt", {
-      secret_key: getKey(),
-      policy: "(A AND B) OR C",
+      aes_key: getKey(),
+      policy: policy,
     });
 
-    console.log("Encryption Successful:", response.data);
-    return { ...response.data, keywords, bloom_filter, encrypted_file_name };
+    const encrypted_key = await response.json();
+
+    const ciphertext = encrypted_key.ciphertext;
+
+    console.log("Encryption Successful:", ciphertext);
+    return { ciphertext, keywords, bloom_filter, encrypted_file_name };
   } catch (error) {
     console.error("Error:", error.response?.data || error.message);
     throw new Error("Encryption or keyword extraction failed");
@@ -148,12 +153,14 @@ async function uploadToPinata(filePath, actualFileName) {
  */
 async function handler(req, res) {
   try {
-    const { uniqueFileName, actualFileName, userAddress, filePath } =
+    const { uniqueFileName, actualFileName, userAddress, filePath, policy } =
       await moveFileToServer(req);
+
+
     console.log("File uploaded successfully", uniqueFileName);
 
     const { ciphertext, keywords, bloom_filter, encrypted_file_name } =
-      await encryptAndExtractKeywords(filePath); // ✅ Fix: Use correct variable
+      await encryptAndExtractKeywords(filePath, policy); // ✅ Fix: Use correct variable
     console.log("Encryption and keyword extraction successful");
 
     // const encryptedFilePath = path.join(ENCRYPT_DIR, encrypted_file_name);

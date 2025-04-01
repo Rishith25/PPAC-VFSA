@@ -10,7 +10,6 @@ export default function RegisterUser() {
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
   const [department, setDepartment] = useState("");
-  const [policyOperator, setPolicyOperator] = useState("AND"); // Default to AND
   const [attributes, setAttributes] = useState("");
 
   const roles = ["Admin", "User", "Manager", "Supervisor"];

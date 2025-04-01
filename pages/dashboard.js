@@ -130,6 +130,12 @@ function App() {
   const [filesList, setFilesList] = useState([]);
   const [showDecryptModal, setShowDecryptModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [role, setRole] = useState("");
+  const [department, setDepartment] = useState("");
+  const [policyOperator, setPolicyOperator] = useState("AND");
+
+  const roles = ["Admin", "User", "Manager", "Supervisor"];
+  const departments = ["IT", "HR", "Finance", "Operations"];
 
   const handleAddKeyword = () => {
     if (keyword.trim()) {
@@ -148,6 +154,7 @@ function App() {
       const formData = new FormData();
       formData.append("filename", fileName);
       formData.append("file", file);
+      formData.append("policy", policy);
       formData.append("keywords", JSON.stringify(keywords));
 
       const res = await fetch("/api/uploadData", {
@@ -207,6 +214,14 @@ function App() {
     setSelectedFile(null);
   };
 
+  const generatePolicy = (role, department, operator) => {
+    if (role && department) {
+      setPolicy(`${role} ${operator} ${department}`);
+    } else {
+      setPolicy("");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="max-w-5xl mx-auto p-6">
@@ -253,16 +268,55 @@ function App() {
             </div> */}
 
             <div className="mb-4">
-              <label className="block text-gray-700 font-semibold mb-2">
-                Policy:
-              </label>
-              <input
-                type="text"
-                value={policy}
-                onChange={(e) => setPolicy(e.target.value)}
-                className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
-                placeholder="Enter policy"
-              />
+              {/* Role Dropdown */}
+              <select
+                className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 mb-2"
+                value={role}
+                onChange={(e) => {
+                  setRole(e.target.value);
+                  generatePolicy(e.target.value, department, policyOperator);
+                }}
+              >
+                <option value="">Select Role</option>
+                {roles.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+
+              {/* Operator Dropdown (AND/OR) */}
+              <select
+                className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 mb-2"
+                value={policyOperator}
+                onChange={(e) => {
+                  setPolicyOperator(e.target.value);
+                  generatePolicy(role, department, e.target.value);
+                }}
+              >
+                <option value="AND">AND</option>
+                <option value="OR">OR</option>
+              </select>
+
+              {/* Department Dropdown */}
+              <select
+                className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 mb-2"
+                value={department}
+                onChange={(e) => {
+                  setDepartment(e.target.value);
+                  generatePolicy(role, e.target.value, policyOperator);
+                }}
+              >
+                <option value="">Select Department</option>
+                {departments.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+
+              {/* Display Generated Policy */}
+              <p className="mt-2 font-semibold">Policy: {policy}</p>
             </div>
 
             <div className="mb-4">
