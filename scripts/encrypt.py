@@ -52,6 +52,7 @@ def save_key(key):
 #         save_key(key)
 #         return key
 
+
 def create_and_save_key():
     key = generate_key()
     save_key(key)

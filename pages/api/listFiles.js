@@ -45,16 +45,18 @@ export default async function handler(req, res) {
         // Fetch blockchain data (e.g., file details) using the fileName
         try {
           const blockchainData = await contract.getFileDetails(file);
-          console.log(blockchainData);
+          // console.log(blockchainData);
 
           return {
             fileName: file, // File name from blockchain data
             uniqueFileName: blockchainData[0], // File name from blockchain data
             encryptedFileName: blockchainData[1], // Encrypted file name from blockchain data
             ipfsHash: blockchainData[2], // IPFS Hash from blockchain data
-            owner: blockchainData[3], // Owner address from blockchain data
-            policy: blockchainData[4], // Policy from blockchain data
-            keywords: blockchainData[5], // Keywords from blockchain data
+            aes_key: blockchainData[3],
+            encrypted_key: blockchainData[4], // Encrypted key from blockchain data
+            owner: blockchainData[5], // Owner address from blockchain data
+            policy: blockchainData[6], // Policy from blockchain data
+            keywords: blockchainData[7], // Keywords from blockchain data
           };
         } catch (err) {
           console.error(

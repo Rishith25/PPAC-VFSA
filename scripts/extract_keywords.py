@@ -114,12 +114,13 @@ def main():
     keywords = extract_keywords(text)
 
     # Bloom Filter Setup
-    bloom = BloomFilter(max_elements=500, error_rate=0.01)
+    bloom = BloomFilter(max_elements=10, error_rate=0.01)
     for keyword in keywords:
         bloom.add(keyword)
 
     # Convert bloom filter to a serializable format
-    bloom_filter_data = [word for word in keywords if word in bloom]
+    # bloom_filter_data = [word for word in keywords if word in bloom]
+    bloom_filter_data = keywords
 
     # Return extracted keywords and bloom filter
     print(json.dumps({"keywords": keywords, "bloom_filter": bloom_filter_data}))

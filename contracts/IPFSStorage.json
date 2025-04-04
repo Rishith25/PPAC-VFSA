@@ -38,6 +38,18 @@
         "type": "string"
       },
       {
+        "indexed": false,
+        "internalType": "string",
+        "name": "aes_key",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "encrypted_key",
+        "type": "string"
+      },
+      {
         "indexed": true,
         "internalType": "address",
         "name": "owner",
@@ -51,32 +63,13 @@
       },
       {
         "indexed": false,
-        "internalType": "bytes32",
+        "internalType": "string[]",
         "name": "bloomFilter",
-        "type": "bytes32"
+        "type": "string[]"
       }
     ],
     "name": "FileUploaded",
     "type": "event"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "fileName",
-        "type": "string"
-      }
-    ],
-    "name": "getIPFSHash",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
   },
   {
     "inputs": [],
@@ -86,25 +79,6 @@
         "internalType": "string[]",
         "name": "",
         "type": "string[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "fileName",
-        "type": "string"
-      }
-    ],
-    "name": "isFileStored",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
       }
     ],
     "stateMutability": "view",
@@ -136,6 +110,16 @@
         "type": "string"
       },
       {
+        "internalType": "string",
+        "name": "aes_key",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "encrypted_key",
+        "type": "string"
+      },
+      {
         "internalType": "address",
         "name": "owner",
         "type": "address"
@@ -146,9 +130,9 @@
         "type": "string"
       },
       {
-        "internalType": "bytes32",
+        "internalType": "string[]",
         "name": "bloomFilter",
-        "type": "bytes32"
+        "type": "string[]"
       }
     ],
     "stateMutability": "view",
@@ -160,14 +144,28 @@
         "internalType": "string",
         "name": "fileName",
         "type": "string"
-      },
-      {
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
       }
     ],
-    "name": "verifyAccess",
+    "name": "getIPFSHash",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "fileName",
+        "type": "string"
+      }
+    ],
+    "name": "isFileStored",
     "outputs": [
       {
         "internalType": "bool",
@@ -202,18 +200,65 @@
       },
       {
         "internalType": "string",
+        "name": "aes_key",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "encrypted_key",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
         "name": "policy",
         "type": "string"
       },
       {
-        "internalType": "bytes32",
+        "internalType": "string[]",
         "name": "bloomFilter",
-        "type": "bytes32"
+        "type": "string[]"
       }
     ],
     "name": "upload",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "userRegistry",
+    "outputs": [
+      {
+        "internalType": "contract UserRegistry",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "fileName",
+        "type": "string"
+      },
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "verifyAccess",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   }
 ]

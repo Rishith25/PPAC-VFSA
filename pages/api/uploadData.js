@@ -17,14 +17,9 @@ const ENCRYPT_SCRIPT = path.join(process.cwd(), "/scripts/encrypt.py");
 const KEY_FILE = "secret.key";
 
 function getKey() {
-  if (fs.existsSync(KEY_FILE)) {
-    const hexKey = fs.readFileSync(KEY_FILE, "utf-8").trim();
-    if (/^[0-9a-fA-F]+$/.test(hexKey) && hexKey.length === 64) {
-      return hexKey; // ✅ Return the key as a string
-    } else {
-      console.log("Invalid key in secret.key, generating a new one.");
-    }
-  }
+  return fs.existsSync(KEY_FILE)
+    ? fs.readFileSync(KEY_FILE, "utf-8").trim()
+    : "";
 }
 
 /**
@@ -60,17 +55,20 @@ async function moveFileToServer(req) {
         actualFileName: file.originalFilename,
         userAddress: fields.userAddress,
         filePath: file.filepath,
-        policy: fields.policy
+        policy: fields.policy,
       });
     });
   });
 }
 
+/**
+ * Extracts keywords and encrypts the file
+ */
 async function encryptAndExtractKeywords(filePath, policy) {
   try {
     // Step 1: Extract keywords and Bloom Filter
     const { stdout } = await execPromise(
-      `/home/shyamprakash/ppac/PPAC-VFSA/myenv/bin/python "${KEYWORD_SCRIPT}" "${filePath}"`
+      `python "${KEYWORD_SCRIPT}" "${filePath}"`
     ); // ✅ Fix: Use correct path
     let extractedData;
     try {
@@ -80,8 +78,6 @@ async function encryptAndExtractKeywords(filePath, policy) {
     }
 
     const { keywords, bloom_filter } = extractedData;
-    console.log("Extracted Keywords:", keywords);
-    // console.log("Bloom Filter Data:", bloom_filter);
 
     const { encrypted_file_name, extracted_keywords } = await new Promise(
       (resolve, reject) => {
@@ -108,12 +104,17 @@ async function encryptAndExtractKeywords(filePath, policy) {
       policy: policy,
     });
 
-    const encrypted_key = await response.json();
+    const encrypted_key = await response.data["ciphertext"];
 
-    const ciphertext = encrypted_key.ciphertext;
+    console.log("Encryption Successful:", encrypted_key);
 
-    console.log("Encryption Successful:", ciphertext);
-    return { ciphertext, keywords, bloom_filter, encrypted_file_name };
+    return {
+      encrypted_key,
+      keywords,
+      bloom_filter,
+      encrypted_file_name,
+      key: getKey(),
+    };
   } catch (error) {
     console.error("Error:", error.response?.data || error.message);
     throw new Error("Encryption or keyword extraction failed");
@@ -156,26 +157,28 @@ async function handler(req, res) {
     const { uniqueFileName, actualFileName, userAddress, filePath, policy } =
       await moveFileToServer(req);
 
-
     console.log("File uploaded successfully", uniqueFileName);
 
-    const { ciphertext, keywords, bloom_filter, encrypted_file_name } =
-      await encryptAndExtractKeywords(filePath, policy); // ✅ Fix: Use correct variable
+    const { encrypted_key, keywords, bloom_filter, encrypted_file_name, key } =
+      await encryptAndExtractKeywords(filePath, policy);
+
     console.log("Encryption and keyword extraction successful");
 
-    // const encryptedFilePath = path.join(ENCRYPT_DIR, encrypted_file_name);
     const encryptedFilePath = encrypted_file_name;
-    console.log(encryptedFilePath);
+
     const ipfsHash = await uploadToPinata(encryptedFilePath, actualFileName);
+
     console.log("File uploaded to IPFS:", ipfsHash);
 
     // Return metadata to the frontend for blockchain transaction
     return res.status(200).json({
       message: "File uploaded to IPFS",
       ipfsHash,
-      keywords, // ✅ Fix: Use correct variable
+      bloom_filter,
+      encrypted_key,
       uniqueFileName: actualFileName,
       encryptedFileName: encrypted_file_name,
+      key,
     });
   } catch (error) {
     console.error("Error:", error);

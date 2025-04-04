@@ -27,19 +27,22 @@ export default function NavBar() {
             Constants.contractUserABI,
             signer
           );
-          const userData = await contract.users(userAddress);
+          const userData = await contract.getUserDetails(userAddress);
 
-          if (userData.isRegistered) {
-            setUser({
+          setUser({
+            name: userData.name,
+            role: userData.role,
+            department: userData.department,
+          });
+
+          localStorage.setItem(
+            "user",
+            JSON.stringify({
               name: userData.name,
               role: userData.role,
-            });
-
-            localStorage.setItem(
-              "user",
-              JSON.stringify({ name: userData.name, role: userData.role })
-            );
-          }
+              department: userData.department,
+            })
+          );
         } catch (error) {
           console.error("Error fetching user details:", error);
         }
@@ -58,20 +61,40 @@ export default function NavBar() {
   return (
     <nav className="bg-blue-600 text-white p-4 flex justify-between items-center">
       <Link href="/">
-        <span className="text-lg font-bold cursor-pointer">My App</span>
+        <span className="text-lg font-bold cursor-pointer">PPAC-VFSA</span>
       </Link>
-      <div>
+
+      <div className="flex items-center space-x-6">
         {user ? (
-          <div className="flex items-center space-x-4">
-            <span>Welcome, {user.userName}</span>
-            <button onClick={logout} className="bg-red-500 px-3 py-1 rounded">
-              Logout
-            </button>
-          </div>
+          <>
+            <Link href="/dashboard">
+              <span className="cursor-pointer hover:text-blue-200">
+                Dashboard
+              </span>
+            </Link>
+            {user.role === "Admin" && (
+              <Link href="/register">
+                <span className="cursor-pointer hover:text-blue-200">
+                  Register
+                </span>
+              </Link>
+            )}
+            <div className="flex items-center space-x-4">
+              <span>Welcome, {user.name}</span>
+              <button
+                onClick={logout}
+                className="bg-red-500 px-3 py-1 rounded hover:bg-red-600"
+              >
+                Logout
+              </button>
+            </div>
+          </>
         ) : (
-          <Link href="/login">
-            <span className="cursor-pointer">Login</span>
-          </Link>
+          <div className="flex space-x-4">
+            <Link href="/login">
+              <span className="cursor-pointer hover:text-blue-200">Login</span>
+            </Link>
+          </div>
         )}
       </div>
     </nav>

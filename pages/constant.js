@@ -3,10 +3,10 @@ export const API_URL = "http://127.0.0.1:7545";
 // GATEWAY: https://gateway.pinata.cloud/ipfs/hashvalue
 
 export const ADMIN_PRIVATE_KEY =
-  "0xeb71510868a31373ff47a4fee2803a1dbaddcb22cd5c7bad3a0f9c5f524d1600";
+  "0xeeecddad6557e753e3c4cfddd78c094ceff1b4780bbd8f67584d7f3aac740403";
 
-export const FilecontractAddress = "0x888F6450B115590Eb840E5B7633f793809353b4A";
-export const UsercontractAddress = "0x74c40987Ecc4b3E9A7f9B361726F039e2a538A91";
+export const FilecontractAddress = "0xa461F097cB2C246373C395baB32774CF545dCF8A";
+export const UsercontractAddress = "0x145014287e3Dfca767Ae60DAe684915f1317c5F5";
 export const contractAbi = [
   {
     inputs: [
@@ -47,6 +47,18 @@ export const contractAbi = [
         type: "string",
       },
       {
+        indexed: false,
+        internalType: "string",
+        name: "aes_key",
+        type: "string",
+      },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "encrypted_key",
+        type: "string",
+      },
+      {
         indexed: true,
         internalType: "address",
         name: "owner",
@@ -60,51 +72,13 @@ export const contractAbi = [
       },
       {
         indexed: false,
-        internalType: "bytes32",
+        internalType: "string[]",
         name: "bloomFilter",
-        type: "bytes32",
+        type: "string[]",
       },
     ],
     name: "FileUploaded",
     type: "event",
-  },
-  {
-    inputs: [
-      {
-        internalType: "string",
-        name: "fileName",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "uniqueFileName",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "encryptedFileName",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "ipfsHash",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "policy",
-        type: "string",
-      },
-      {
-        internalType: "bytes32",
-        name: "bloomFilter",
-        type: "bytes32",
-      },
-    ],
-    name: "upload",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
   },
   {
     inputs: [],
@@ -145,6 +119,16 @@ export const contractAbi = [
         type: "string",
       },
       {
+        internalType: "string",
+        name: "aes_key",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "encrypted_key",
+        type: "string",
+      },
+      {
         internalType: "address",
         name: "owner",
         type: "address",
@@ -155,9 +139,9 @@ export const contractAbi = [
         type: "string",
       },
       {
-        internalType: "bytes32",
+        internalType: "string[]",
         name: "bloomFilter",
-        type: "bytes32",
+        type: "string[]",
       },
     ],
     stateMutability: "view",
@@ -199,6 +183,54 @@ export const contractAbi = [
       },
     ],
     stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "string",
+        name: "fileName",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "uniqueFileName",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "encryptedFileName",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "ipfsHash",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "aes_key",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "encrypted_key",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "policy",
+        type: "string",
+      },
+      {
+        internalType: "string[]",
+        name: "bloomFilter",
+        type: "string[]",
+      },
+    ],
+    name: "upload",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
   {
@@ -372,6 +404,45 @@ export const contractUserABI = [
       {
         internalType: "string",
         name: "",
+        type: "string",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "_user",
+        type: "address",
+      },
+    ],
+    name: "getUserDetails",
+    outputs: [
+      {
+        internalType: "string",
+        name: "userName",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "name",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "role",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "department",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "attributes",
         type: "string",
       },
     ],

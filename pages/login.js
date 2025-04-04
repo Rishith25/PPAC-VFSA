@@ -21,6 +21,7 @@ export default function LoginPage() {
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [user, setUser] = useState(null);
   const router = useRouter();
 
   async function onSubmit(data) {
@@ -50,22 +51,19 @@ export default function LoginPage() {
         throw new Error("Invalid username or password.");
       }
 
-      // const addr = await signer.getAddress();
-
-      console.log("address: /////////////////////////////////")
-      console.log(userAddress);
-
       // Fetch user key separately
       const userKey = await contract.getUserKey(userAddress);
 
-      console.log("user key : //////////////////////")
+      const userData = await contract.getUserDetails(userAddress);
 
-      console.log(userKey)
-
-      // Store user details in localStorage
       localStorage.setItem(
         "user",
-        JSON.stringify({ userKey : userKey })
+        JSON.stringify({
+          name: userData.name,
+          role: userData.role,
+          department: userData.department,
+          userKey: userKey,
+        })
       );
 
       router.push("/dashboard");

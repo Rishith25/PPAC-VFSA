@@ -1,19 +1,5 @@
 import { ethers } from "ethers";
 import * as Constants from "../constant";
-import fs from "fs";
-
-const KEY_FILE = "secret.key";
-
-function getKey() {
-  if (fs.existsSync(KEY_FILE)) {
-    const hexKey = fs.readFileSync(KEY_FILE, "utf-8").trim();
-    if (/^[0-9a-fA-F]+$/.test(hexKey) && hexKey.length === 64) {
-      return hexKey; // ✅ Return the key as a string
-    } else {
-      console.log("Invalid key in secret.key, generating a new one.");
-    }
-  }
-}
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -46,7 +32,7 @@ export default async function handler(req, res) {
 
     const UserSecretKeyRes = await keyGenRes.json();
 
-    const UserSecretKey = JSON.stringify(UserSecretKeyRes)
+    const UserSecretKey = JSON.stringify(UserSecretKeyRes);
 
     console.log("UserSecretKey:", UserSecretKey);
 
@@ -59,8 +45,6 @@ export default async function handler(req, res) {
       adminWallet
     );
 
-    const hashedPassword = ethers.keccak256(ethers.toUtf8Bytes(password));
-
     const tx = await contract.registerUser(
       userAddress,
       userName,
@@ -69,7 +53,7 @@ export default async function handler(req, res) {
       role,
       department,
       "",
-      UserSecretKey, // Store encrypted key
+      UserSecretKey,
       { gasLimit: 3000000 }
     );
 
